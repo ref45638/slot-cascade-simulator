@@ -2,7 +2,7 @@
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
-    <title>Aztec盤面測試</title>
+    <title>SLOT掉落盤面測試</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <!-- Google tag (gtag.js) -->
@@ -21,6 +21,16 @@
   </script>
   <body>
     <div class="input-container">
+      <div class="format-selector">
+        <label>
+          <input type="checkbox" id="formatAztec" name="format" />
+          AZTEC 格式
+        </label>
+        <label>
+          <input type="checkbox" id="formatCommon" name="format" />
+          通用格式
+        </label>
+      </div>
       <label for="gameData">遊戲資料 (JSON格式):</label>
       <textarea
         id="gameData"

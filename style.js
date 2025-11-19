@@ -18,7 +18,7 @@ const colors = [
 // 盤面形狀：1=有格，0=空格
 // 直向排列，每一子陣列是一「列」
 // 每列長度（最高5），不足就填0
-const shape = [
+const shapeAztec = [
   [0, 1, 1, 1, 1, 1], // 第一列（最左）
   [1, 1, 1, 1, 1, 1], // 第二列
   [1, 1, 1, 1, 1, 1],
@@ -26,6 +26,18 @@ const shape = [
   [1, 1, 1, 1, 1, 1],
   [0, 1, 1, 1, 1, 1], // 最右
 ];
+
+const shapeCommon = [
+  [1, 1, 1, 1, 1], // 第一列（最左）
+  [1, 1, 1, 1, 1], // 第二列
+  [1, 1, 1, 1, 1],
+  [1, 1, 1, 1, 1],
+  [1, 1, 1, 1, 1],
+  [1, 1, 1, 1, 1], // 最右
+];
+
+// 當前使用的格式（預設為 AZTEC）
+let currentShape = shapeAztec;
 
 // 陣列填入方式 (直向順序)
 // 32格
@@ -79,16 +91,16 @@ function renderBoard(arr, borders = [], blinkPositions = []) {
   // 記錄每個格子的位置信息
   const cellPositions = [];
 
-  for (let c = 0; c < shape.length; c++) {
+  for (let c = 0; c < currentShape.length; c++) {
     const col = document.createElement("div");
     col.className = "col";
 
-    for (let r = 0; r < shape[c].length; r++) {
+    for (let r = 0; r < currentShape[c].length; r++) {
       const cell = document.createElement("div");
       cell.className = "cell";
       cell.dataset.position = idx;
 
-      if (shape[c][r]) {
+      if (currentShape[c][r]) {
         const colorIndex = arr[idx % arr.length] % colors.length;
         cell.style.background = colors[colorIndex];
 
@@ -163,6 +175,115 @@ function renderBoard(arr, borders = [], blinkPositions = []) {
       }
     });
   }, 0);
+
+  // 為每個 blink 格子添加點擊事件監聽器
+  setTimeout(() => {
+    const blinkingCells = board.querySelectorAll(".cell.blink");
+    blinkingCells.forEach((cell) => {
+      cell.addEventListener("click", function (event) {
+        // 查找所有具有 blink 類別的元素（包括已隱藏的）
+        const allBlinkingCells = board.querySelectorAll(
+          ".cell.blink, .cell.blink-hidden"
+        );
+
+        if (allBlinkingCells.length > 0) {
+          // 檢查當前狀態：是否有隱藏的元素
+          const hiddenCells = board.querySelectorAll(".cell.blink-hidden");
+
+          if (hiddenCells.length > 0) {
+            // 如果有隱藏的元素，則恢復顯示
+            allBlinkingCells.forEach((blinkCell) => {
+              blinkCell.style.opacity = "1";
+              blinkCell.classList.remove("blink-hidden");
+              blinkCell.classList.add("blink");
+            });
+          } else {
+            // 如果沒有隱藏的元素，則隱藏所有閃爍元素
+            allBlinkingCells.forEach((blinkCell) => {
+              blinkCell.style.opacity = "0";
+              blinkCell.classList.remove("blink");
+              blinkCell.classList.add("blink-hidden");
+            });
+          }
+
+          // 阻止事件冒泡，避免重複觸發
+          event.stopPropagation();
+        }
+      });
+    });
+  }, 100);
+
+  return board;
+}
+
+function renderBoardCommon(arr, blinkPositions = []) {
+  let idx = 0;
+  const board = document.createElement("div");
+  board.className = "board";
+  board.style.position = "relative"; // 讓board成為定位容器
+
+  // 記錄每個格子的位置信息
+  const cellPositions = [];
+
+  for (let c = 0; c < currentShape.length; c++) {
+    const col = document.createElement("div");
+    col.className = "col";
+
+    for (let r = 0; r < currentShape[c].length; r++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.position = idx;
+
+      if (currentShape[c][r]) {
+        const colorIndex = arr[idx % arr.length] % colors.length;
+        cell.style.background = colors[colorIndex];
+
+        // 創建主要文字內容
+        const mainText = document.createElement("div");
+        mainText.textContent = idxToShowCommon(arr[idx % arr.length]);
+        mainText.style.fontSize = "20px";
+        mainText.style.fontWeight = "bold";
+
+        // 創建位置編號（右下角小數字）
+        const positionNumber = document.createElement("div");
+        positionNumber.textContent = mappingRealIdxToFakeIdx[idx];
+        positionNumber.style.position = "absolute";
+        positionNumber.style.bottom = "2px";
+        positionNumber.style.right = "2px";
+        positionNumber.style.fontSize = "10px";
+        positionNumber.style.fontWeight = "normal";
+        positionNumber.style.opacity = "0.7";
+        positionNumber.style.lineHeight = "1";
+
+        // 設置cell為相對定位，讓子元素可以絕對定位
+        cell.style.position = "relative";
+
+        // 將元素添加到cell中
+        cell.appendChild(mainText);
+        cell.appendChild(positionNumber);
+
+        // 檢查是否需要閃爍
+        if (blinkPositions.includes(idx)) {
+          cell.classList.add("blink");
+        }
+
+        // 記錄格子位置和元素
+        cellPositions[idx] = {
+          element: cell,
+          col: c,
+          row: r,
+          index: idx,
+        };
+
+        idx++;
+      } else {
+        cell.classList.add("empty");
+      }
+
+      col.appendChild(cell);
+    }
+    board.appendChild(col);
+  }
 
   // 為每個 blink 格子添加點擊事件監聽器
   setTimeout(() => {
@@ -305,25 +426,115 @@ idxToShow = (idx) => {
   }
 };
 
+idxToShowCommon = (idx) => {
+  switch (idx) {
+    case 0:
+      return "WW";
+    case 1:
+      return "H1";
+    case 2:
+      return "H2";
+    case 3:
+      return "H3";
+    case 4:
+      return "H4";
+    case 5:
+      return "L1";
+    case 6:
+      return "L2";
+    case 7:
+      return "L3";
+    case 8:
+      return "L4";
+    case 9:
+      return "L5";
+    case 10:
+      return "SF";
+    case 11:
+      return "+1";
+    case 12:
+      return "+2";
+    case 13:
+      return "MS";
+    case 14:
+      return "MS2";
+    case 15:
+      return "B";
+    case 16:
+      return "BB";
+  }
+};
+
 document.addEventListener("DOMContentLoaded", function () {
   const boardsContainer = document.getElementById("boardsContainer");
   const gameDataField = document.getElementById("gameData");
+  const formatAztecCheckbox = document.getElementById("formatAztec");
+  const formatCommonCheckbox = document.getElementById("formatCommon");
 
-  // 初始化輸入框的值
-  firstArray = fakeArrToRealArr(firstArray);
+  // 從 localStorage 讀取上次選擇的格式
+  const savedFormat = localStorage.getItem("selectedFormat") || "aztec";
 
-  // 設置您提供的遊戲資料
-  const initialGameData = JSON.parse(
-    `{"ReelInfo":{"ReelStrip":[5,6,8,9,3,2,7,12,1,1,6,6,6,3,9,7,7,3,7,7,9,10,1,1,1,1,6,12,3,6,6,6,0,0,9,8,5,9,8,11,9,2,2,4,4,5,8,5],"ReelIndex":[22,71,79,19,72,99,90],"SymbolInfos":[{"ID":1,"Pos":8,"Type":"2","Kind":"normal","Amount":0},{"ID":6,"Pos":10,"Type":"3","Kind":"normal","Amount":0},{"ID":7,"Pos":15,"Type":"2","Kind":"silver","Amount":0},{"ID":7,"Pos":18,"Type":"2","Kind":"normal","Amount":0},{"ID":1,"Pos":22,"Type":"4","Kind":"normal","Amount":0},{"ID":6,"Pos":29,"Type":"3","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"RemoveInfos":[{"FallReels":[[7],[5,7],[4],[10,4,9,11],[],[],[]],"RemovePos":[4,8,9,17,22,23,24,25],"ReelStrip":[5,7,6,8,9,2,7,5,5,7,6,6,6,6,10,4,7,7,7,7,7,6,10,4,9,11,6,12,12,6,6,6,0,0,9,9,5,9,8,11,9,7,8,4,4,5,8,10],"SymbolInfos":[{"ID":6,"Pos":10,"Type":"3","Kind":"normal","Amount":0},{"ID":7,"Pos":18,"Type":"2","Kind":"silver","Amount":0},{"ID":6,"Pos":29,"Type":"3","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":3,"WinType":1,"WinPay":40}],"RemoveWin":4000,"Multiple":2,"RemoveWays":7200},{"FallReels":[[4],[8],[10,6,10,10],[],[],[],[]],"RemovePos":[1,9,16,17,18,19],"ReelStrip":[11,4,6,8,9,2,10,8,8,5,6,6,6,4,8,10,6,4,10,10,10,6,10,4,9,11,6,9,12,6,6,6,0,0,12,7,5,9,8,11,9,4,6,4,4,5,8,5],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":7,"WinType":0,"WinPay":12}],"RemoveWin":2400,"Multiple":3,"RemoveWays":9000},{"FallReels":[[8],[5,10,11],[8],[11],[12,9,5],[],[]],"RemovePos":[2,10,11,12,16,26,29,30,31],"ReelStrip":[7,8,4,8,9,2,11,10,5,10,11,8,5,4,2,8,10,4,10,10,2,6,11,10,4,9,11,9,2,12,9,5,0,0,4,6,5,9,8,11,9,3,11,4,4,5,8,2],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":6,"WinType":2,"WinPay":20}],"RemoveWin":6000,"Multiple":4,"RemoveWays":22500},{"FallReels":[[4,12],[4],[2],[],[],[],[4]],"RemovePos":[1,3,46,11,15],"ReelStrip":[9,4,12,4,9,2,3,12,4,5,10,11,5,2,8,2,10,4,10,10,11,3,11,10,4,9,11,12,4,12,9,5,0,0,11,10,5,9,8,11,9,5,8,4,4,4,5,4],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":8,"WinType":0,"WinPay":16}],"RemoveWin":6400,"Multiple":5,"RemoveWays":22500},{"FallReels":[[11,3],[8],[5],[6],[],[],[6,5,12]],"RemovePos":[1,3,8,45,17,44,24,43],"ReelStrip":[9,11,3,12,9,2,12,4,8,5,10,11,5,4,6,5,2,10,10,10,6,9,6,11,10,9,11,2,2,12,9,5,0,0,6,10,5,9,8,11,9,3,11,6,5,12,5,10],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":4,"WinType":2,"WinPay":400}],"RemoveWin":200000,"Multiple":6,"RemoveWays":22500},{"FallReels":null,"RemovePos":null,"ReelStrip":null,"SymbolInfos":null,"WinConditions":null,"RemoveWin":0,"Multiple":0,"RemoveWays":0}],"CurrentWays":2700},"WinInfo":{"FgGameTimes":0,"FgGameType":0,"FgFirstReelInfo":{"ReelStrip":null,"ReelIndex":null,"SymbolInfos":null,"RemoveInfos":null,"CurrentWays":0},"TotalWin":218800,"TotalPay":2188,"TotalLine":0,"WinCondition":null},"WagerID":"129016e0defc2221000","Coin":4407973900,"Wallet":{"Coin":4407973900,"Revision":1}}`
-  );
+  // 根據儲存的格式設置 checkbox 和 currentShape
+  if (savedFormat === "common") {
+    formatAztecCheckbox.checked = false;
+    formatCommonCheckbox.checked = true;
+    currentShape = shapeCommon;
+  } else {
+    formatAztecCheckbox.checked = true;
+    formatCommonCheckbox.checked = false;
+    currentShape = shapeAztec;
+  }
 
-  gameDataField.value = JSON.stringify(initialGameData, null, 2);
+  // 添加 checkbox 事件監聽器
+  formatAztecCheckbox.addEventListener("change", function () {
+    if (this.checked) {
+      formatCommonCheckbox.checked = false;
+      currentShape = shapeAztec;
+      localStorage.setItem("selectedFormat", "aztec");
+      updateFromGameData();
+    } else if (!formatCommonCheckbox.checked) {
+      this.checked = true;
+    }
+  });
 
-  // 為gameData輸入框添加onchange事件監聽器
-  gameDataField.addEventListener("input", updateFromGameData);
+  formatCommonCheckbox.addEventListener("change", function () {
+    if (this.checked) {
+      formatAztecCheckbox.checked = false;
+      currentShape = shapeCommon;
+      localStorage.setItem("selectedFormat", "common");
+      updateFromGameDataCommon();
+    } else if (!formatAztecCheckbox.checked) {
+      this.checked = true;
+    }
+  });
 
-  // 觸發更新來渲染所有盤面
-  updateFromGameData();
+  if (savedFormat === "common") {
+    // 設置您提供的遊戲資料
+    const initialGameData = JSON.parse(
+      `{"ReelInfo":{"ReelStrip":[6,6,3,3,1,7,7,6,6,5,8,8,3,3,7,8,8,8,5,5,8,8,5,5,5,8,8,9,9,3],"ReelIndex":null,"MultiplierPlate":[[4,4]],"SymbolInfos":[{"ID":13,"Pos":4,"Type":"","Kind":"","Amount":4}],"RemoveInfos":[{"FallReels":[[],[],[6,4],[7,3,5],[6,15],[3,3]],"RemovePos":[10,11,15,16,17,20,21,25,26],"ReelStrip":[6,6,3,3,1,7,7,6,6,5,6,4,3,3,7,7,3,5,5,5,6,15,5,5,5,3,3,9,9,3],"SymbolInfos":null,"WinConditions":[{"WinItem":8,"WinType":0,"WinPay":2,"Win":200}],"MultiplierPlate":[[4,4],[10,2],[11,2],[15,2],[16,2],[17,2],[20,2],[21,2],[25,2],[26,2]],"MysterySymbolID":-1},{"FallReels":[[5,15],[],[8,9],[5],[],[7,3,8]],"RemovePos":[2,3,12,13,16,25,26,29],"ReelStrip":[5,15,6,6,1,7,7,6,6,5,8,9,6,4,7,5,7,5,5,5,6,15,5,5,5,7,3,8,9,9],"SymbolInfos":null,"WinConditions":[{"WinItem":3,"WinType":0,"WinPay":18,"Win":1800}],"MultiplierPlate":[[4,4],[10,2],[11,2],[15,2],[16,4],[17,2],[20,2],[21,2],[25,4],[26,4],[2,2],[3,2],[12,2],[13,2],[29,2]],"MysterySymbolID":-1},{"FallReels":[[4],[9],[],[9,2,2,5],[2,8,6],[]],"RemovePos":[0,9,15,17,18,19,22,23,24],"ReelStrip":[4,15,6,6,1,9,7,7,6,6,8,9,6,4,7,9,2,2,5,7,2,8,6,6,15,7,3,8,9,9],"SymbolInfos":[{"ID":15,"Pos":0,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":1,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":2,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":5,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":6,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":7,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":18,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":19,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":23,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":24,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":28,"Type":"small","Kind":"","Amount":0},{"ID":15,"Pos":29,"Type":"small","Kind":"","Amount":0}],"WinConditions":[{"WinItem":5,"WinType":0,"WinPay":8,"Win":800}],"MultiplierPlate":[[4,4],[10,2],[11,2],[15,4],[16,4],[17,4],[20,2],[21,2],[25,4],[26,4],[2,2],[3,2],[12,2],[13,2],[29,2],[0,2],[9,2],[18,2],[19,2],[22,2],[23,2],[24,2]],"MysterySymbolID":-1},{"FallReels":[[4,3,7],[1,3,3],[],[4,2],[2,8],[3,9]],"RemovePos":[0,1,2,5,6,7,18,19,23,24,28,29],"ReelStrip":[4,3,7,6,1,1,3,3,6,6,8,9,6,4,7,4,2,9,2,2,2,8,2,8,6,3,9,7,3,8],"SymbolInfos":null,"WinConditions":null,"MultiplierPlate":[[4,4],[10,2],[11,2],[15,4],[16,4],[17,4],[20,2],[21,2],[25,4],[26,4],[2,4],[3,2],[12,2],[13,2],[29,4],[0,4],[9,2],[18,4],[19,4],[22,2],[23,4],[24,4],[1,2],[5,2],[6,2],[7,2],[28,2]],"MysterySymbolID":-1}],"MysterySymbolID":1},"WinInfo":{"FgGameTimes":0,"FgGameType":0,"FgFirstReelInfo":{"ReelStrip":null,"ReelIndex":null,"MultiplierPlate":null,"SymbolInfos":null,"RemoveInfos":null,"MysterySymbolID":0},"TotalWin":2800,"TotalPay":28,"TotalLine":3,"WinCondition":null,"FreeMode":0,"IsMaxPayout":false},"WagerID":"126016f1c07a0d43000","Coin":15079213200,"Wallet":{"Coin":15079213200,"Revision":1}}`
+    );
+
+    gameDataField.value = JSON.stringify(initialGameData, null, 2);
+
+    // 為gameData輸入框添加onchange事件監聽器
+    gameDataField.addEventListener("input", updateFromGameDataCommon);
+
+    // 觸發更新來渲染所有盤面
+    updateFromGameDataCommon();
+  } else {
+    // 設置您提供的遊戲資料
+    const initialGameData = JSON.parse(
+      `{"ReelInfo":{"ReelStrip":[5,6,8,9,3,2,7,12,1,1,6,6,6,3,9,7,7,3,7,7,9,10,1,1,1,1,6,12,3,6,6,6,0,0,9,8,5,9,8,11,9,2,2,4,4,5,8,5],"ReelIndex":[22,71,79,19,72,99,90],"SymbolInfos":[{"ID":1,"Pos":8,"Type":"2","Kind":"normal","Amount":0},{"ID":6,"Pos":10,"Type":"3","Kind":"normal","Amount":0},{"ID":7,"Pos":15,"Type":"2","Kind":"silver","Amount":0},{"ID":7,"Pos":18,"Type":"2","Kind":"normal","Amount":0},{"ID":1,"Pos":22,"Type":"4","Kind":"normal","Amount":0},{"ID":6,"Pos":29,"Type":"3","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"RemoveInfos":[{"FallReels":[[7],[5,7],[4],[10,4,9,11],[],[],[]],"RemovePos":[4,8,9,17,22,23,24,25],"ReelStrip":[5,7,6,8,9,2,7,5,5,7,6,6,6,6,10,4,7,7,7,7,7,6,10,4,9,11,6,12,12,6,6,6,0,0,9,9,5,9,8,11,9,7,8,4,4,5,8,10],"SymbolInfos":[{"ID":6,"Pos":10,"Type":"3","Kind":"normal","Amount":0},{"ID":7,"Pos":18,"Type":"2","Kind":"silver","Amount":0},{"ID":6,"Pos":29,"Type":"3","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":3,"WinType":1,"WinPay":40}],"RemoveWin":4000,"Multiple":2,"RemoveWays":7200},{"FallReels":[[4],[8],[10,6,10,10],[],[],[],[]],"RemovePos":[1,9,16,17,18,19],"ReelStrip":[11,4,6,8,9,2,10,8,8,5,6,6,6,4,8,10,6,4,10,10,10,6,10,4,9,11,6,9,12,6,6,6,0,0,12,7,5,9,8,11,9,4,6,4,4,5,8,5],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":7,"WinType":0,"WinPay":12}],"RemoveWin":2400,"Multiple":3,"RemoveWays":9000},{"FallReels":[[8],[5,10,11],[8],[11],[12,9,5],[],[]],"RemovePos":[2,10,11,12,16,26,29,30,31],"ReelStrip":[7,8,4,8,9,2,11,10,5,10,11,8,5,4,2,8,10,4,10,10,2,6,11,10,4,9,11,9,2,12,9,5,0,0,4,6,5,9,8,11,9,3,11,4,4,5,8,2],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":6,"WinType":2,"WinPay":20}],"RemoveWin":6000,"Multiple":4,"RemoveWays":22500},{"FallReels":[[4,12],[4],[2],[],[],[],[4]],"RemovePos":[1,3,46,11,15],"ReelStrip":[9,4,12,4,9,2,3,12,4,5,10,11,5,2,8,2,10,4,10,10,11,3,11,10,4,9,11,12,4,12,9,5,0,0,11,10,5,9,8,11,9,5,8,4,4,4,5,4],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":8,"WinType":0,"WinPay":16}],"RemoveWin":6400,"Multiple":5,"RemoveWays":22500},{"FallReels":[[11,3],[8],[5],[6],[],[],[6,5,12]],"RemovePos":[1,3,8,45,17,44,24,43],"ReelStrip":[9,11,3,12,9,2,12,4,8,5,10,11,5,4,6,5,2,10,10,10,6,9,6,11,10,9,11,2,2,12,9,5,0,0,6,10,5,9,8,11,9,3,11,6,5,12,5,10],"SymbolInfos":[{"ID":7,"Pos":18,"Type":"2","Kind":"gold","Amount":0},{"ID":0,"Pos":32,"Type":"2","Kind":"normal","Amount":0}],"WinConditions":[{"WinLine":0,"WinItem":4,"WinType":2,"WinPay":400}],"RemoveWin":200000,"Multiple":6,"RemoveWays":22500},{"FallReels":null,"RemovePos":null,"ReelStrip":null,"SymbolInfos":null,"WinConditions":null,"RemoveWin":0,"Multiple":0,"RemoveWays":0}],"CurrentWays":2700},"WinInfo":{"FgGameTimes":0,"FgGameType":0,"FgFirstReelInfo":{"ReelStrip":null,"ReelIndex":null,"SymbolInfos":null,"RemoveInfos":null,"CurrentWays":0},"TotalWin":218800,"TotalPay":2188,"TotalLine":0,"WinCondition":null},"WagerID":"129016e0defc2221000","Coin":4407973900,"Wallet":{"Coin":4407973900,"Revision":1}}`
+    );
+
+    gameDataField.value = JSON.stringify(initialGameData, null, 2);
+
+    // 為gameData輸入框添加onchange事件監聽器
+    gameDataField.addEventListener("input", updateFromGameData);
+
+    // 觸發更新來渲染所有盤面
+    updateFromGameData();
+  }
 });
 
 function renderAllBoards(initialReelStrip, initialSymbolInfos, removeInfos) {
@@ -374,11 +585,6 @@ function renderAllBoards(initialReelStrip, initialSymbolInfos, removeInfos) {
         title.className = "board-title";
         title.textContent = `掉落後盤面 ${index + 1}`;
 
-        // // 如果有中獎資訊，顯示中獎金額
-        // if (removeInfo.RemoveWin && removeInfo.RemoveWin > 0) {
-        //   title.textContent += ` (中獎: ${removeInfo.RemoveWin})`;
-        // }
-
         boardSection.appendChild(title);
 
         // 處理 ReelStrip（檢查是否需要轉換）
@@ -402,6 +608,76 @@ function renderAllBoards(initialReelStrip, initialSymbolInfos, removeInfos) {
             removeInfo.SymbolInfos || [],
             blinkPositions
           )
+        );
+        boardsContainer.appendChild(boardSection);
+      }
+    });
+  }
+}
+
+function renderAllBoardsCommon(initialReelStrip, removeInfos) {
+  const boardsContainer = document.getElementById("boardsContainer");
+  boardsContainer.innerHTML = "";
+
+  // 渲染第一個盤面（原始盤面）
+  const firstBoardSection = document.createElement("div");
+  firstBoardSection.className = "board-section";
+
+  const firstTitle = document.createElement("div");
+  firstTitle.className = "board-title";
+  firstTitle.textContent = "原始盤面";
+  firstBoardSection.appendChild(firstTitle);
+
+  // 第一個 board 使用第一個 RemoveInfo 的 RemovePos 來閃爍
+  const firstBlinkPositions =
+    removeInfos && removeInfos.length > 0 && removeInfos[0].RemovePos
+      ? removeInfos[0].RemovePos.map((pos) => pos)
+      : [];
+
+  firstBoardSection.appendChild(
+    renderBoardCommon(initialReelStrip, firstBlinkPositions)
+  );
+  boardsContainer.appendChild(firstBoardSection);
+
+  // 渲染 RemoveInfos 中的每個盤面
+  if (removeInfos && removeInfos.length > 0) {
+    removeInfos.forEach((removeInfo, index) => {
+      // 只渲染有效的 RemoveInfo（ReelStrip 不為 null）
+      if (removeInfo.ReelStrip && removeInfo.ReelStrip.length > 0) {
+        // 添加箭頭
+        const arrowContainer = document.createElement("div");
+        arrowContainer.className = "arrow-container";
+        const arrow = document.createElement("div");
+        arrow.className = "arrow-down";
+        arrow.innerHTML = "&#8595;";
+        arrowContainer.appendChild(arrow);
+        boardsContainer.appendChild(arrowContainer);
+
+        // 添加盤面
+        const boardSection = document.createElement("div");
+        boardSection.className = "board-section";
+
+        const title = document.createElement("div");
+        title.className = "board-title";
+        title.textContent = `掉落後盤面 ${index + 1}`;
+
+        boardSection.appendChild(title);
+
+        // 處理 ReelStrip（檢查是否需要轉換）
+        let processedReelStrip = removeInfo.ReelStrip;
+        if (processedReelStrip.length === 42) {
+          processedReelStrip = fakeArrToRealArrCommon(processedReelStrip);
+        }
+
+        // 計算此盤面的閃爍位置（使用下一個 RemoveInfo 的 RemovePos）
+        const nextRemoveInfo = removeInfos[index + 1];
+        const blinkPositions =
+          nextRemoveInfo && nextRemoveInfo.RemovePos
+            ? nextRemoveInfo.RemovePos.map((pos) => pos)
+            : [];
+
+        boardSection.appendChild(
+          renderBoardCommon(processedReelStrip, blinkPositions)
         );
         boardsContainer.appendChild(boardSection);
       }
@@ -468,6 +744,61 @@ function updateFromGameData() {
   }
 }
 
+function updateFromGameDataCommon() {
+  const gameDataField = document.getElementById("gameData");
+
+  try {
+    const gameData = JSON.parse(gameDataField.value.trim());
+
+    // 檢查是否有正確的結構
+    if (!gameData.ReelInfo) {
+      throw new Error("缺少 ReelInfo 屬性");
+    }
+
+    // 提取 ReelStrip 作為 inputArray
+    let firstArray = gameData.ReelInfo.ReelStrip || [];
+
+    // 檢查是否是42格的假輪帶資料
+    if (firstArray.length === 42) {
+      firstArray = fakeArrToRealArrCommon(firstArray);
+
+      let symbolInfos =
+        "{" +
+        gameData.ReelInfo.SymbolInfos.map(
+          (o) =>
+            "{" +
+            Object.entries(o)
+              .map(([k, v]) =>
+                typeof v === "string" ? `${k}: "${v}"` : `${k}: ${v}`
+              )
+              .join(", ") +
+            "}"
+        ).join(", ") +
+        "}";
+
+      console.log("SymbolInfos", symbolInfos);
+    }
+
+    // 提取 RemoveInfos
+    const removeInfos = gameData.ReelInfo.RemoveInfos || [];
+
+    // 更新全域變數
+    firstArray = firstArray;
+    borderConfigs = [];
+
+    // 渲染所有盤面
+    renderAllBoardsCommon(firstArray, removeInfos);
+
+    console.log("更新成功:", {
+      firstArray: firstArray,
+      removeInfos: removeInfos,
+    });
+  } catch (error) {
+    console.error("遊戲資料解析錯誤:", error);
+    alert("遊戲資料格式錯誤，請檢查JSON格式\n錯誤: " + error.message);
+  }
+}
+
 // 設定邊框配置的函數（保留向後相容性）
 function setBorderConfigs(configs) {
   borderConfigs = configs;
@@ -480,6 +811,14 @@ let fakeArrToRealArr = (fakeArr) => {
   console.log("已轉換48格假輪帶為32格真輪帶:", fakeArr);
 
   return originalToTransfer(fakeArr);
+};
+
+let fakeArrToRealArrCommon = (fakeArr) => {
+  let removeIdx = [0, 6, 7, 13, 14, 20, 21, 27, 28, 34, 35, 41]; // 移除假輪帶
+  fakeArr = fakeArr.filter((_, idx) => !removeIdx.includes(idx));
+  console.log("已轉換42格假輪帶為30格真輪帶:", fakeArr);
+
+  return fakeArr;
 };
 
 const mapping = {

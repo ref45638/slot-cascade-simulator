@@ -1,10 +1,12 @@
-# Riches of Aztec's Cascading Reels Simulator
+# Slot Cascade Simulator
 
 ![Reels](img/reels.png)
 
 ## Overview
 
-This is an Riches of Aztec's Cascading Reels Simulator designed to visualize game boards and cascade elimination effects.
+This is a Slot Cascade Simulator designed to visualize game boards and cascade elimination effects.
+
+Online demo: https://ref45638.github.io/slot-cascade-simulator/
 
 ## Features
 
