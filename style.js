@@ -355,21 +355,26 @@ function createBorderOverlay(board, borderGroup) {
   const lastRect = lastCell.getBoundingClientRect();
   const boardRect = board.getBoundingClientRect();
 
-  // 獲取board的padding值
+  // 獲取board的border寬度
   const boardStyles = window.getComputedStyle(board);
-  const paddingLeft = parseInt(boardStyles.paddingLeft) || 0;
-  const paddingTop = parseInt(boardStyles.paddingTop) || 0;
+  const borderLeft = parseFloat(boardStyles.borderLeftWidth) || 0;
+  const borderTop = parseFloat(boardStyles.borderTopWidth) || 0;
 
-  // 計算相對於board內容區域的位置（扣除padding）
-  const left = firstRect.left - boardRect.left - paddingLeft - 3 + 9;
-  const top = firstRect.top - boardRect.top - paddingTop - 3 + 10;
-  const width = lastRect.right - firstRect.left + 6 - 5;
-  const height = lastRect.bottom - firstRect.top + 6 - 4;
+  // 計算相對於board padding box的位置
+  // firstRect.left - boardRect.left 是相對於board border box左上角的距離
+  // 減去 borderLeft 得到相對於 padding box 左上角的距離
+  const left = firstRect.left - boardRect.left - borderLeft;
+  const top = firstRect.top - boardRect.top - borderTop;
 
-  overlay.style.left = left + "px";
-  overlay.style.top = top + "px";
-  overlay.style.width = width + "px";
-  overlay.style.height = height + "px";
+  // 額外擴展的大小 (padding)
+  const overlayPadding = 4;
+
+  overlay.style.left = left - overlayPadding + "px";
+  overlay.style.top = top - overlayPadding + "px";
+  overlay.style.width =
+    lastRect.right - firstRect.left + overlayPadding * 2 + "px";
+  overlay.style.height =
+    lastRect.bottom - firstRect.top + overlayPadding * 2 + "px";
 
   board.appendChild(overlay);
 }
@@ -466,7 +471,6 @@ idxToShowCommon = (idx) => {
 };
 
 document.addEventListener("DOMContentLoaded", function () {
-  const boardsContainer = document.getElementById("boardsContainer");
   const gameDataField = document.getElementById("gameData");
   const formatAztecCheckbox = document.getElementById("formatAztec");
   const formatCommonCheckbox = document.getElementById("formatCommon");
@@ -495,18 +499,28 @@ document.addEventListener("DOMContentLoaded", function () {
       formatCommonCheckbox.checked = false;
       currentShape = shapeAztec;
       localStorage.setItem("selectedFormat", "aztec");
-      
+
       // 檢查當前資料是否為 Common 格式的預設值
       const currentData = gameDataField.value.trim();
       const normalizedCurrentData = JSON.stringify(JSON.parse(currentData));
-      const normalizedDefaultCommon = JSON.stringify(JSON.parse(defaultGameDataCommon));
-      
+      const normalizedDefaultCommon = JSON.stringify(
+        JSON.parse(defaultGameDataCommon)
+      );
+
       if (normalizedCurrentData === normalizedDefaultCommon) {
         // 如果是預設值，切換到 Aztec 格式的預設盤面
-        gameDataField.value = JSON.stringify(JSON.parse(defaultGameDataAztec), null, 2);
+        gameDataField.value = JSON.stringify(
+          JSON.parse(defaultGameDataAztec),
+          null,
+          2
+        );
       }
-      
+
       updateFromGameData();
+      
+      // 更新事件監聽器
+      gameDataField.removeEventListener("input", updateFromGameDataCommon);
+      gameDataField.addEventListener("input", updateFromGameData);
     } else if (!formatCommonCheckbox.checked) {
       this.checked = true;
     }
@@ -517,18 +531,28 @@ document.addEventListener("DOMContentLoaded", function () {
       formatAztecCheckbox.checked = false;
       currentShape = shapeCommon;
       localStorage.setItem("selectedFormat", "common");
-      
+
       // 檢查當前資料是否為 Aztec 格式的預設值
       const currentData = gameDataField.value.trim();
       const normalizedCurrentData = JSON.stringify(JSON.parse(currentData));
-      const normalizedDefaultAztec = JSON.stringify(JSON.parse(defaultGameDataAztec));
-      
+      const normalizedDefaultAztec = JSON.stringify(
+        JSON.parse(defaultGameDataAztec)
+      );
+
       if (normalizedCurrentData === normalizedDefaultAztec) {
         // 如果是預設值，切換到 Common 格式的預設盤面
-        gameDataField.value = JSON.stringify(JSON.parse(defaultGameDataCommon), null, 2);
+        gameDataField.value = JSON.stringify(
+          JSON.parse(defaultGameDataCommon),
+          null,
+          2
+        );
       }
-      
+
       updateFromGameDataCommon();
+      
+      // 更新事件監聽器
+      gameDataField.removeEventListener("input", updateFromGameData);
+      gameDataField.addEventListener("input", updateFromGameDataCommon);
     } else if (!formatAztecCheckbox.checked) {
       this.checked = true;
     }
@@ -554,9 +578,33 @@ document.addEventListener("DOMContentLoaded", function () {
     // 為gameData輸入框添加onchange事件監聽器
     gameDataField.addEventListener("input", updateFromGameData);
 
-    // 觸發更新來渲染所有盤面
     updateFromGameData();
   }
+
+  // Theme Toggle Logic
+  const themeToggle = document.getElementById("themeToggle");
+  const html = document.documentElement;
+  
+  // Check for saved theme or system preference
+  const savedTheme = localStorage.getItem("theme");
+  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  
+  if (savedTheme) {
+    html.setAttribute("data-theme", savedTheme);
+    html.style.colorScheme = savedTheme;
+  } else {
+    html.setAttribute("data-theme", systemTheme);
+    html.style.colorScheme = systemTheme;
+  }
+  
+  themeToggle.addEventListener("click", () => {
+    const currentTheme = html.getAttribute("data-theme");
+    const newTheme = currentTheme === "dark" ? "light" : "dark";
+    
+    html.setAttribute("data-theme", newTheme);
+    html.style.colorScheme = newTheme;
+    localStorage.setItem("theme", newTheme);
+  });
 });
 
 function renderAllBoards(initialReelStrip, initialSymbolInfos, removeInfos) {
@@ -760,9 +808,10 @@ function updateFromGameData() {
       borderConfigs: newBorderConfigs,
       removeInfos: removeInfos,
     });
+    showToast("更新成功", "success");
   } catch (error) {
     console.error("遊戲資料解析錯誤:", error);
-    alert("遊戲資料格式錯誤，請檢查JSON格式\n錯誤: " + error.message);
+    showToast("遊戲資料格式錯誤: " + error.message, "error");
   }
 }
 
@@ -815,9 +864,10 @@ function updateFromGameDataCommon() {
       firstArray: firstArray,
       removeInfos: removeInfos,
     });
+    showToast("更新成功", "success");
   } catch (error) {
     console.error("遊戲資料解析錯誤:", error);
-    alert("遊戲資料格式錯誤，請檢查JSON格式\n錯誤: " + error.message);
+    showToast("遊戲資料格式錯誤: " + error.message, "error");
   }
 }
 
@@ -979,4 +1029,37 @@ function convertFakePositionToRealPosition(fakePos) {
     return mapping[realIdx];
   }
   return -1; // 如果找不到對應的位置，返回 -1
+}
+
+function showToast(message, type = "info") {
+  const container =
+    document.querySelector(".toast-container") || createToastContainer();
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+
+  // Add icon based on type
+  let icon = "";
+  if (type === "success") icon = "✓";
+  else if (type === "error") icon = "✕";
+  else icon = "ℹ";
+
+  toast.innerHTML = `<span style="font-weight:bold; font-size:1.2em">${icon}</span> <span>${message}</span>`;
+
+  container.appendChild(toast);
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    toast.style.animation = "fadeOut 0.3s ease-out forwards";
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
+
+function createToastContainer() {
+  const container = document.createElement("div");
+  container.className = "toast-container";
+  document.body.appendChild(container);
+  return container;
 }

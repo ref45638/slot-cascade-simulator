@@ -1,8 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" style="color-scheme: dark">
   <head>
     <meta charset="UTF-8" />
-    <title>SLOT掉落盤面測試</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SLOT Cascade Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <!-- Google tag (gtag.js) -->
@@ -20,25 +27,58 @@
     gtag("config", "G-L7M4W8S2P0");
   </script>
   <body>
-    <div class="input-container">
-      <div class="format-selector">
-        <label>
-          <input type="checkbox" id="formatAztec" name="format" />
-          AZTEC 格式
-        </label>
-        <label>
-          <input type="checkbox" id="formatCommon" name="format" />
-          通用格式
-        </label>
-      </div>
-      <label for="gameData">遊戲資料 (JSON格式):</label>
-      <textarea
-        id="gameData"
-        rows="6"
-        placeholder='{"ReelInfo":{"ReelStrip":[7,8,9,3,2,5...],"SymbolInfos":[{"ID":1,"Pos":11,"Type":"2","Kind":"normal","Amount":0}],"RemoveInfos":[...]}}'
-      ></textarea>
+    <div class="app-container">
+      <header class="app-header">
+        <div class="header-content">
+          <h1>SLOT Cascade Simulator</h1>
+          <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+            <span class="icon-sun">☀️</span>
+            <span class="icon-moon">🌙</span>
+          </button>
+        </div>
+        <p class="subtitle">掉落盤面測試工具</p>
+      </header>
+
+      <main class="main-content">
+        <div class="control-panel">
+          <div class="panel-header">
+            <h2>Configuration</h2>
+          </div>
+          <div class="panel-body">
+            <div class="format-selector">
+              <span class="label-text">Format:</span>
+              <label class="radio-label">
+                <input type="checkbox" id="formatAztec" name="format" />
+                <span class="radio-custom"></span>
+                AZTEC 格式
+              </label>
+              <label class="radio-label">
+                <input type="checkbox" id="formatCommon" name="format" />
+                <span class="radio-custom"></span>
+                通用格式
+              </label>
+            </div>
+
+            <div class="input-group">
+              <label for="gameData">Game Data (JSON):</label>
+              <textarea
+                id="gameData"
+                rows="6"
+                placeholder='{"ReelInfo":{"ReelStrip":[...],"SymbolInfos":[...],"RemoveInfos":[...]}}'
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="boards-container" id="boardsContainer">
+          <!-- Boards will be rendered here -->
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <p>&copy; 2023 Slot Simulator</p>
+      </footer>
     </div>
-    <div class="boards-container" id="boardsContainer"></div>
     <script src="style.js"></script>
   </body>
 </html>
